@@ -2,14 +2,18 @@
   "name": "soundtrip",
   "version": "0.1.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.js",
   "scripts": {
     "start": "expo start"
   },
   "dependencies": {
     "expo": "~51.0.0",
+    "expo-av": "~14.0.3",
     "react": "18.2.0",
-    "react-native": "0.74.3",
-    "expo-av": "~14.0.3"
+    "react-native": "0.74.3"
+  },
+  "devDependencies": {
+    "@types/react": "~18.2.79",
+    "typescript": "~5.3.3"
   }
 }
