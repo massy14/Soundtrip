@@ -1,19 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 import datetime as dt
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from pathlib import Path
 
 # 環境変数を読み込み
 load_dotenv()
 
-app = FastAPI(title="Soundtrip API", version="0.3.0")
+app = FastAPI(title="Soundtrip API", version="0.4.0")
 
 # OpenAIクライアント初期化
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# 音声ファイル保存ディレクトリ
+AUDIO_DIR = Path("audio_files")
+AUDIO_DIR.mkdir(exist_ok=True)
 
 # ---- CORS（開発用。公開時はオリジンを絞る）----
 app.add_middleware(
@@ -159,13 +166,25 @@ def generate_story_with_chatgpt(payload: StoryInput) -> dict:
         print("[DEBUG] Lyrics generation completed")
         suno_lyrics = lyrics_response.choices[0].message.content.strip()
         
+        # ストーリーIDを生成（タイムスタンプベース）
+        import time
+        story_id = f"story_{int(time.time())}"
+        
         result = {
+            "id": story_id,
             "title": story_data.get("title", f"{d.city}、{d.season}の{d.timeOfDay}に"),
             "chapters": story_data.get("chapters", []),
             "sunoLyrics": suno_lyrics,
             "affiliateContext": {"themes": ["旅行ガイド", "宿泊施設", "グルメ体験"]},
             "audioUrl": None
         }
+        
+        # 音声を生成
+        print("[DEBUG] Generating audio narration...")
+        audio_url = generate_audio_from_story(result, story_id)
+        if audio_url:
+            result["audioUrl"] = audio_url
+            print(f"[DEBUG] Audio URL: {audio_url}")
         
         print("[DEBUG] Story generation successful")
         return result
@@ -203,3 +222,55 @@ def generate_fallback_story(payload: StoryInput) -> dict:
 def create_story(spec: StoryInput):
     story = generate_story_with_chatgpt(spec)
     return story
+
+# ---- 音声生成 ----
+def generate_audio_from_story(story: dict, story_id: str) -> str:
+    """ストーリーから音声を生成"""
+    try:
+        # ストーリー全体のテキストを結合
+        full_text = f"{story['title']}。\n\n"
+        for chapter in story['chapters']:
+            full_text += f"{chapter['name']}。{chapter['text']}\n\n"
+        
+        print(f"[DEBUG] Generating audio for story: {story_id}")
+        print(f"[DEBUG] Text length: {len(full_text)} characters")
+        
+        # OpenAI TTS APIで音声生成
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice="nova",  # alloy, echo, fable, onyx, nova, shimmer
+            input=full_text,
+            speed=1.0
+        )
+        
+        # 音声ファイルを保存
+        audio_path = AUDIO_DIR / f"{story_id}.mp3"
+        response.stream_to_file(str(audio_path))
+        
+        print(f"[DEBUG] Audio file saved: {audio_path}")
+        return f"/audio/{story_id}.mp3"
+        
+    except Exception as e:
+        print(f"[ERROR] Audio generation error: {type(e).__name__}: {str(e)}")
+        return None
+
+@app.post("/v1/stories/{story_id}/audio")
+def generate_story_audio(story_id: str, story: dict):
+    """ストーリーの音声を生成"""
+    audio_url = generate_audio_from_story(story, story_id)
+    if audio_url:
+        return {"audioUrl": audio_url, "status": "success"}
+    else:
+        return {"audioUrl": None, "status": "error"}
+
+@app.get("/audio/{story_id}.mp3")
+def get_audio(story_id: str):
+    """音声ファイルを配信"""
+    audio_path = AUDIO_DIR / f"{story_id}.mp3"
+    if audio_path.exists():
+        return FileResponse(
+            str(audio_path),
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": f"inline; filename={story_id}.mp3"}
+        )
+    return {"error": "Audio file not found"}

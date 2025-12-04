@@ -102,6 +102,21 @@ export default function App() {
       {story && (
         <View style={styles.storyCard}>
           <Text style={styles.storyTitle}>📖 {story.title}</Text>
+
+          {/* 音声プレイヤー */}
+          {story.audioUrl && (
+            <View style={styles.audioCard}>
+              <Text style={styles.audioTitle}>🎧 音声で聴く</Text>
+              <audio
+                controls
+                style={{ width: '100%', marginTop: 12 }}
+                src={`${API_BASE}${story.audioUrl}`}
+              >
+                お使いのブラウザは音声再生に対応していません。
+              </audio>
+            </View>
+          )}
+
           {story.chapters?.map((c: any, i: number) => (
             <View key={i} style={styles.chapterCard}>
               <Text style={styles.chapterName}>✨ {c.name}</Text>
@@ -291,5 +306,20 @@ const styles = StyleSheet.create({
     color: '#555',
     lineHeight: 24,
     fontStyle: 'italic',
+  },
+  audioCard: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 16,
+    borderWidth: 2,
+    borderColor: '#42a5f5',
+  },
+  audioTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1976d2',
+    marginBottom: 8,
+    textAlign: 'center',
   },
 });
