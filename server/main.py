@@ -34,7 +34,7 @@ app.add_middleware(
 # ---- モデル ----
 class Destination(BaseModel):
     city: str
-    season: str
+    date: str  # YYYY-MM-DD format
     timeOfDay: str
 
 class UserProfile(BaseModel):
@@ -70,7 +70,7 @@ def generate_story_with_chatgpt(payload: StoryInput) -> dict:
 
 【旅の情報】
 - 目的地: {d.city}
-- 季節: {d.season}
+- 日付: {d.date}
 - 時間帯: {d.timeOfDay}
 - 年齢層: {u.ageRange}
 - 同行者: {u.companions}
@@ -102,7 +102,7 @@ def generate_story_with_chatgpt(payload: StoryInput) -> dict:
 
 【旅の情報】
 - 目的地: {d.city}
-- 季節: {d.season}
+- 日付: {d.date}
 - 時間帯: {d.timeOfDay}
 - 気分: {', '.join(u.mood)}
 - コメント: {comment}
@@ -130,7 +130,7 @@ def generate_story_with_chatgpt(payload: StoryInput) -> dict:
 - 歌詞のみを出力し、他の説明は不要"""
 
     try:
-        print(f"[DEBUG] Starting story generation for {d.city}, {d.season}, {d.timeOfDay}")
+        print(f"[DEBUG] Starting story generation for {d.city}, {d.date}, {d.timeOfDay}")
         print(f"[DEBUG] Comment: {comment}")
         
         # ストーリー生成
@@ -172,7 +172,7 @@ def generate_story_with_chatgpt(payload: StoryInput) -> dict:
         
         result = {
             "id": story_id,
-            "title": story_data.get("title", f"{d.city}、{d.season}の{d.timeOfDay}に"),
+            "title": story_data.get("title", f"{d.city}、{d.date}の{d.timeOfDay}に"),
             "chapters": story_data.get("chapters", []),
             "sunoLyrics": suno_lyrics,
             "affiliateContext": {"themes": ["旅行ガイド", "宿泊施設", "グルメ体験"]},
@@ -204,15 +204,15 @@ def generate_fallback_story(payload: StoryInput) -> dict:
     comment_text = f"「{payload.comment}」という思いを胸に、" if payload.comment else ""
     
     return {
-        "title": f"{d.city}、{d.season}の{d.timeOfDay}に",
+        "title": f"{d.city}、{d.date}の{d.timeOfDay}に",
         "chapters": [
-            {"name":"導入","text": f"{d.city}の空気は、{d.season}の匂い。{u.ageRange}のあなたは、{comment_text}歩きはじめる。"},
+            {"name":"導入","text": f"{d.city}の空気。{d.date}、{u.ageRange}のあなたは、{comment_text}歩きはじめる。"},
             {"name":"街歩き","text": f"路地に入ると足音が柔らかくなる。{d.timeOfDay}の光が壁を薄く染める。"},
             {"name":"出会い","text": "店先で湯気に誘われ、言葉少なな会釈を交わす。"},
             {"name":"体験","text": "一椀の温かさが胸に広がり、遠い記憶がそっと起き上がる。"},
             {"name":"余韻","text": "帰り道、風が頬を撫でる。今日の静けさが、明日を少しだけ優しくする。"}
         ],
-        "sunoLyrics": f"[Verse 1]\n{d.city}の街角\n{d.season}の風が吹く\n{d.timeOfDay}の光の中\n新しい物語が始まる\n\n[Chorus]\n旅は続く、心のままに\n{payload.comment or '旅の思い出'}\nこの瞬間を忘れない\n永遠に響く旅の歌",
+        "sunoLyrics": f"[Verse 1]\n{d.city}の街角\n{d.date}の思い出\n{d.timeOfDay}の光の中\n新しい物語が始まる\n\n[Chorus]\n旅は続く、心のままに\n{payload.comment or '旅の思い出'}\nこの瞬間を忘れない\n永遠に響く旅の歌",
         "affiliateContext": {"themes": ["町家宿","夕暮れ散歩ガイド","和菓子体験"]},
         "audioUrl": None
     }

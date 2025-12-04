@@ -1,15 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet } from 'react-native';
 
 const API_BASE = "http://localhost:8000";
 
 export default function App() {
   const [city, setCity] = useState("京都");
-  const [season, setSeason] = useState("秋");
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
   const [timeOfDay, setTimeOfDay] = useState("夕方");
   const [comment, setComment] = useState("");
   const [story, setStory] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const [savedStories, setSavedStories] = useState<{ [key: string]: any }>({});
+
+  // ローカルストレージから保存済みストーリーを読み込み
+  useEffect(() => {
+    const stored = localStorage.getItem('soundtrip_stories');
+    if (stored) {
+      setSavedStories(JSON.parse(stored));
+    }
+  }, []);
 
   const createStory = async () => {
     setLoading(true);
@@ -18,7 +27,7 @@ export default function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        destination: { city, season, timeOfDay },
+        destination: { city, date, timeOfDay },
         userProfile: { ageRange: '30s', companions: 'solo', mood: ['quiet', 'nostalgic'], budget: 'mid' },
         audioStyle: { voice: 'ja-JP-NanamiNeural', bgm: 'jazz_ambient', sfx: ['temple_bell', 'river', 'alley'] },
         comment: comment
@@ -27,6 +36,37 @@ export default function App() {
     const data = await res.json();
     setStory(data);
     setLoading(false);
+  };
+
+  const saveStory = () => {
+    if (!story) return;
+
+    const newSavedStories = {
+      ...savedStories,
+      [date]: {
+        ...story,
+        city,
+        date,
+        timeOfDay,
+        comment,
+        savedAt: new Date().toISOString()
+      }
+    };
+
+    setSavedStories(newSavedStories);
+    localStorage.setItem('soundtrip_stories', JSON.stringify(newSavedStories));
+    alert('ストーリーを保存しました！');
+  };
+
+  const loadStory = (selectedDate: string) => {
+    const savedStory = savedStories[selectedDate];
+    if (savedStory) {
+      setCity(savedStory.city);
+      setDate(savedStory.date);
+      setTimeOfDay(savedStory.timeOfDay);
+      setComment(savedStory.comment || "");
+      setStory(savedStory);
+    }
   };
 
   return (
@@ -54,13 +94,22 @@ export default function App() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>🍂 季節</Text>
-          <TextInput
-            value={season}
-            onChangeText={setSeason}
-            placeholder="例: 春、夏、秋、冬"
-            style={styles.input}
-            placeholderTextColor="#999"
+          <Text style={styles.inputLabel}>📅 日付</Text>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            style={{
+              borderWidth: 2,
+              borderColor: '#e0e0e0',
+              padding: 14,
+              borderRadius: 12,
+              fontSize: 16,
+              backgroundColor: '#fafafa',
+              color: '#333',
+              width: '100%',
+              border: '2px solid #e0e0e0'
+            }}
           />
         </View>
 
@@ -96,7 +145,37 @@ export default function App() {
             {loading ? "🎨 生成中..." : "🎬 旅の物語を作る"}
           </Text>
         </TouchableOpacity>
+
+        {story && (
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={saveStory}
+          >
+            <Text style={styles.saveButtonText}>
+              💾 この日のストーリーを保存
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* カレンダー表示 */}
+      {Object.keys(savedStories).length > 0 && (
+        <View style={styles.calendarCard}>
+          <Text style={styles.calendarTitle}>📆 保存済みストーリー</Text>
+          <View style={styles.calendarGrid}>
+            {Object.keys(savedStories).sort().reverse().map((savedDate) => (
+              <TouchableOpacity
+                key={savedDate}
+                style={styles.calendarItem}
+                onPress={() => loadStory(savedDate)}
+              >
+                <Text style={styles.calendarDate}>{savedDate}</Text>
+                <Text style={styles.calendarCity}>{savedStories[savedDate].city}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* ストーリー表示 */}
       {story && (
@@ -321,5 +400,62 @@ const styles = StyleSheet.create({
     color: '#1976d2',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#4caf50',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 12,
+    shadowColor: '#4caf50',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  calendarCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+  },
+  calendarTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  calendarItem: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 12,
+    minWidth: 120,
+    borderWidth: 2,
+    borderColor: '#667eea',
+  },
+  calendarDate: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#667eea',
+    marginBottom: 4,
+  },
+  calendarCity: {
+    fontSize: 12,
+    color: '#666',
   },
 });
