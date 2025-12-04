@@ -11,14 +11,27 @@ export default function App() {
   const [story, setStory] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [savedStories, setSavedStories] = useState<{ [key: string]: any }>({});
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // ローカルストレージから保存済みストーリーを読み込み
+  // ローカルストレージから保存済みストーリーとダークモード設定を読み込み
   useEffect(() => {
     const stored = localStorage.getItem('soundtrip_stories');
     if (stored) {
       setSavedStories(JSON.parse(stored));
     }
+
+    const darkModeSetting = localStorage.getItem('soundtrip_darkmode');
+    if (darkModeSetting) {
+      setIsDarkMode(darkModeSetting === 'true');
+    }
   }, []);
+
+  // ダークモード設定を保存
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    localStorage.setItem('soundtrip_darkmode', String(newMode));
+  };
 
   const createStory = async () => {
     setLoading(true);
@@ -69,17 +82,25 @@ export default function App() {
     }
   };
 
+
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={[styles.container, isDarkMode && styles.containerDark]} contentContainerStyle={styles.contentContainer}>
       {/* ヘッダー */}
-      <View style={styles.header}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
+        <TouchableOpacity
+          style={styles.darkModeToggle}
+          onPress={toggleDarkMode}
+        >
+          <Text style={styles.darkModeIcon}>{isDarkMode ? '☀️' : '🌙'}</Text>
+        </TouchableOpacity>
         <Text style={styles.headerEmoji}>✈️</Text>
         <Text style={styles.headerTitle}>Soundtrip</Text>
         <Text style={styles.headerSubtitle}>🎧 旅の物語を音で届ける</Text>
       </View>
 
       {/* 入力フォーム */}
-      <View style={styles.formCard}>
+      <View style={[styles.formCard, isDarkMode && styles.formCardDark]}>
         <Text style={styles.formTitle}>🗺️ 旅の目的地を選ぼう</Text>
 
         <View style={styles.inputGroup}>
@@ -160,13 +181,13 @@ export default function App() {
 
       {/* カレンダー表示 */}
       {Object.keys(savedStories).length > 0 && (
-        <View style={styles.calendarCard}>
-          <Text style={styles.calendarTitle}>📆 保存済みストーリー</Text>
+        <View style={[styles.calendarCard, isDarkMode && styles.calendarCardDark]}>
+          <Text style={[styles.calendarTitle, isDarkMode && styles.textDark]}>📆 保存済みストーリー</Text>
           <View style={styles.calendarGrid}>
             {Object.keys(savedStories).sort().reverse().map((savedDate) => (
               <TouchableOpacity
                 key={savedDate}
-                style={styles.calendarItem}
+                style={[styles.calendarItem, isDarkMode && styles.calendarItemDark]}
                 onPress={() => loadStory(savedDate)}
               >
                 <Text style={styles.calendarDate}>{savedDate}</Text>
@@ -179,12 +200,12 @@ export default function App() {
 
       {/* ストーリー表示 */}
       {story && (
-        <View style={styles.storyCard}>
-          <Text style={styles.storyTitle}>📖 {story.title}</Text>
+        <View style={[styles.storyCard, isDarkMode && styles.storyCardDark]}>
+          <Text style={[styles.storyTitle, isDarkMode && styles.textDark]}>📖 {story.title}</Text>
 
           {/* 音声プレイヤー */}
           {story.audioUrl && (
-            <View style={styles.audioCard}>
+            <View style={[styles.audioCard, isDarkMode && styles.audioCardDark]}>
               <Text style={styles.audioTitle}>🎧 音声で聴く</Text>
               <audio
                 controls
@@ -197,7 +218,7 @@ export default function App() {
           )}
 
           {story.chapters?.map((c: any, i: number) => (
-            <View key={i} style={styles.chapterCard}>
+            <View key={i} style={[styles.chapterCard, isDarkMode && styles.chapterCardDark]}>
               <Text style={styles.chapterName}>✨ {c.name}</Text>
               <Text style={styles.chapterText}>{c.text}</Text>
             </View>
@@ -205,7 +226,7 @@ export default function App() {
 
           {/* Suno歌詞 */}
           {story.sunoLyrics && (
-            <View style={styles.lyricsCard}>
+            <View style={[styles.lyricsCard, isDarkMode && styles.lyricsCardDark]}>
               <Text style={styles.lyricsTitle}>🎵 Suno 歌詞</Text>
               <Text style={styles.lyricsText}>{story.sunoLyrics}</Text>
             </View>
@@ -457,5 +478,52 @@ const styles = StyleSheet.create({
   calendarCity: {
     fontSize: 12,
     color: '#666',
+  },
+  // ダークモードスタイル
+  containerDark: {
+    backgroundColor: '#1a1a1a',
+  },
+  headerDark: {
+    backgroundColor: '#2d2d2d',
+  },
+  formCardDark: {
+    backgroundColor: '#2d2d2d',
+  },
+  darkModeToggle: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  darkModeIcon: {
+    fontSize: 24,
+  },
+  // ダークモード用コンポーネントスタイル
+  textDark: {
+    color: '#e0e0e0',
+  },
+  calendarCardDark: {
+    backgroundColor: '#333',
+    shadowColor: '#000',
+  },
+  calendarItemDark: {
+    backgroundColor: '#444',
+    borderColor: '#666',
+  },
+  storyCardDark: {
+    backgroundColor: '#333',
+    shadowColor: '#000',
+  },
+  audioCardDark: {
+    backgroundColor: '#2c3e50',
+    borderColor: '#455a64',
+  },
+  chapterCardDark: {
+    backgroundColor: '#444',
+    borderColor: '#555',
+  },
+  lyricsCardDark: {
+    backgroundColor: '#3e2723',
+    borderColor: '#5d4037',
   },
 });
