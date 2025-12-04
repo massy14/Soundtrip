@@ -3,20 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "main": "index.js",
+  "homepage": "https://massy14.github.io/Soundtrip",
   "scripts": {
-    "start": "expo start"
+    "start": "expo start",
+    "predeploy": "npx expo export --platform web",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~3.2.3",
     "expo": "~51.0.0",
     "expo-av": "~14.0.3",
     "react": "18.2.0",
-    "react-native": "0.74.3",
-    "react-native-web": "~0.19.10",
     "react-dom": "18.2.0",
-    "@expo/metro-runtime": "~3.2.3"
+    "react-native": "0.74.3",
+    "react-native-web": "~0.19.10"
   },
   "devDependencies": {
     "@types/react": "~18.2.79",
+    "gh-pages": "^6.3.0",
     "typescript": "~5.3.3"
   }
 }
